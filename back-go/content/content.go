@@ -108,6 +108,19 @@ func (c *Content) ModifyItem(item do.Item) {
 }
 
 
+// add item
+func (c *Content) AddItem(item do.Item) {
+    id := c.idm.MakeID()
+	item.Id = id
+	c.data[id] = item
+	root := getItemRoot(id)
+	source := root + SourceFileBase
+	translate := root + TranslateFileBase
+	utils.SaveFile(source, item.Source)
+	utils.SaveFile(translate, item.Translation)
+}
+
+
 func getItemRoot(id string) string {
 	return DataPath + id + "/"
 }
