@@ -2,8 +2,10 @@ package content
 
 import (
 	"fmt"
-	"log"
+
 	"os"
+
+	"github.com/gofiber/fiber/v3/log"
 
 	"github.com/shanliao420/learn1000/back-go/do"
 	"github.com/shanliao420/learn1000/back-go/utils"
@@ -50,19 +52,19 @@ func (c *Content) Init() {
 }
 
 func (c *Content) addItem(id string) {
-	root := getItemRoot(id)
+	root := GetItemRoot(id)
 	source := root + SourceFileBase
 	translate := root + TranslateFileBase
 	firstRecordAddr := root + FirstRecordAddrFileBase
 	lastRecordAddr := root + LastRecordAddrFileBase
 	sourceString, err := utils.ReadFile(source)
 	if err != nil {
-		log.Println("Error reading source file:", err, "id: ", id)
+		log.Info("Error reading source file:", err, "id: ", id)
 		return
 	}
 	translateString, err := utils.ReadFile(translate)
 	if err != nil {
-		log.Println("Error reading file:", err, "id: ", id)
+		log.Info("Error reading file:", err, "id: ", id)
 		return
 	}
 	item := &do.Item{
@@ -99,28 +101,69 @@ func (c *Content) DeleteItem(id string) {
 
 // modify item
 func (c *Content) ModifyItem(item do.Item) {
+	old := c.data[item.Id]
+	item.FirstRecordAddr = old.FirstRecordAddr
+	item.LastRecordAddr = old.LastRecordAddr
 	c.data[item.Id] = item
-	root := getItemRoot(item.Id)
+	root := GetItemRoot(item.Id)
 	source := root + SourceFileBase
 	translate := root + TranslateFileBase
 	utils.SaveFile(source, item.Source)
 	utils.SaveFile(translate, item.Translation)
 }
-
 
 // add item
 func (c *Content) AddItem(item do.Item) {
-    id := c.idm.MakeID()
-	item.Id = id
-	c.data[id] = item
-	root := getItemRoot(id)
+	c.data[item.Id] = item
+	root := GetItemRoot(item.Id)
 	source := root + SourceFileBase
 	translate := root + TranslateFileBase
 	utils.SaveFile(source, item.Source)
 	utils.SaveFile(translate, item.Translation)
+	if item.Source == "" && item.Translation == "" {
+		err := utils.CreateFile(root, SourceFileBase)
+		if err != nil {
+			log.Info("Error creating file:", err, "id: ", item.Id)
+		}
+		err = utils.CreateFile(root, TranslateFileBase)
+		if err != nil {
+			log.Info("Error creating file:", err, "id: ", item.Id)
+		}
+	}
+	err := utils.CreateFile(root, FirstRecordAddrFileBase)
+	if err != nil {
+		log.Info("Error creating file:", err, "id: ", item.Id)
+	}
+	err = utils.CreateFile(root, LastRecordAddrFileBase)
+	if err != nil {
+		log.Info("Error creating file:", err, "id: ", item.Id)
+	}
 }
 
-
-func getItemRoot(id string) string {
+func GetItemRoot(id string) string {
 	return DataPath + id + "/"
+}
+
+// new blank item
+func (c *Content) NewBlankItem() string {
+	id := c.idm.MakeID()
+	list := c.GetIdList()
+	date := c.idm.GetDateFromID(id)
+	for _, existsDate := range list {
+		if existsDate == date {
+			return ""
+		}
+	    
+	}
+	root := GetItemRoot(id)
+	item := &do.Item{
+		Id:              id,
+		Source:          "",
+		Translation:     "",
+		FirstRecordAddr: root + FirstRecordAddrFileBase,
+		LastRecordAddr:  root + LastRecordAddrFileBase,
+	}
+	c.AddItem(*item)
+	fmt.Println(*item)
+	return id
 }
